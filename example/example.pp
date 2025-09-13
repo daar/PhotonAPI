@@ -4,65 +4,47 @@ program example;
 
 uses
   {$ifdef UNIX}cthreads, cmem,{$endif}
-  Classes,
-  CometAPI,
   fphttpapp,
-  fpjson,
   httpdefs,
-  SysUtils;
+  CometAPI;
 
-  procedure Route1(aReq: TRequest; aResp: TResponse);
-  var
-    Data: TJSONObject;
+  procedure Route1(aReq: TRequest; aResp: TResponse; const Args: array of variant);
   begin
-    if aReq.Method <> 'GET' then
-    begin
-      aResp.Code := 405;
-      aResp.Content := '{"error":"Method not allowed"}';
-      Exit;
-    end;
-
-    Data := TJSONObject.Create;
-    try
-      Data.Add('message', 'Hello from Route 1');
-      JsonResponse(aResp, Data);
-    finally
-      Data.Free;
-    end;
+    SendResponse(aResp, [
+      'message', 'Hello from Route 1'
+    ]);
   end;
 
-  procedure Route2(aReq: TRequest; aResp: TResponse);
+  procedure Route2(aReq: TRequest; aResp: TResponse; const Args: array of variant);
   var
-    Data:      TJSONObject;
-    nameParam: string;
+    name:    string;
+    age:     integer;
+    premium: boolean;
   begin
-    if aReq.Method <> 'GET' then
-    begin
-      aResp.Code := 405;
-      aResp.Content := '{"error":"Method not allowed"}';
-      Exit;
-    end;
+    name := Args[0];      // string
+    age := Args[1];       // integer
+    premium := Args[2];   // boolean
 
-    nameParam := aReq.QueryFields.Values['name'];
-    if nameParam = '' then
-      nameParam := 'Anonymous';
-
-    Data := TJSONObject.Create;
-    try
-      Data.Add('message', 'Hello from Route 2');
-      Data.Add('name', nameParam);
-      JsonResponse(aResp, Data);
-    finally
-      Data.Free;
-    end;
+    SendResponse(aResp, [
+      'message', 'Hello from Route 2',
+      'name', name,
+      'age', age,
+      'premium', premium
+    ]);
   end;
 
 begin
+  // Override the default application title for your application
   Application.Title := 'CometAPI Demo';
 
   // Register user routes (system routes are hidden in the unit)
-  RegisterRoute('/', 'GET', @Route1);
-  RegisterRoute('/route2', 'GET', @Route2);
+  RegisterRoute('/', 'GET', @Route1, []);
+
+  RegisterRoute('/route2', 'GET', @Route2, [
+    Param('name', ptString, 'Anonymous'),
+    Param('age', ptInteger, 18),
+    Param('premium', ptBoolean, False)
+  ]);
 
   Application.Run;
 end.
