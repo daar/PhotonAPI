@@ -105,8 +105,6 @@ Explore OpenAPI and Swagger UI:
 
 ## Project Status
 
-The project aims to provide a **minimal, fast, and type-safe API framework** for Free Pascal projects, while avoiding unnecessary complexity.
-
 Contributions, feature requests, and feedback are always welcome. Please submit issues via the [issue tracker](https://github.com/daar/photonapi/issues) or contribute improvements through pull requests.
 
 
