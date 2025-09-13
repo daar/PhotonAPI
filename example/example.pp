@@ -5,7 +5,7 @@ program example;
 uses
   {$ifdef UNIX}cthreads, cmem,{$endif}
   Classes,
-  CometAPI,
+  PhotonAPI,
   fphttpapp,
   fpjson,
   httpdefs,
@@ -51,7 +51,7 @@ uses
 
 begin
   // Override the default application title for your application
-  Application.Title := 'CometAPI Demo';
+  Application.Title := 'PhotonAPI Demo';
 
   // Register user routes (system routes are hidden in the unit)
   RegisterRoute('/', 'GET', @Route1, []);

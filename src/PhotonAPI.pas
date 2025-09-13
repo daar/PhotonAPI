@@ -1,4 +1,4 @@
-unit CometAPI;
+unit PhotonAPI;
 
 {$mode objfpc}{$H+}
 
@@ -456,7 +456,7 @@ initialization
   RegisterRoute('/docs', 'GET', @DocsHandler, [], False);
   Routes[High(Routes)].IsSystem := True;
 
-  Application.Title := 'CometAPI';
+  Application.Title := 'PhotonAPI';
   Application.Port := 8080;
   Application.Threaded := True;
   Application.Initialize;
