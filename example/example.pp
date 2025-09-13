@@ -4,9 +4,12 @@ program example;
 
 uses
   {$ifdef UNIX}cthreads, cmem,{$endif}
+  Classes,
+  CometAPI,
   fphttpapp,
+  fpjson,
   httpdefs,
-  CometAPI;
+  SysUtils;
 
   procedure Route1(aReq: TRequest; aResp: TResponse; const Args: array of variant);
   begin
@@ -21,15 +24,28 @@ uses
     age:     integer;
     premium: boolean;
   begin
-    name := Args[0];      // string
-    age := Args[1];       // integer
-    premium := Args[2];   // boolean
+    // Args[0] = name (string)
+    // Args[1] = age (integer)
+    // Args[2] = premium (boolean)
 
     SendResponse(aResp, [
       'message', 'Hello from Route 2',
-      'name', name,
-      'age', age,
-      'premium', premium
+      'name', Args[0],
+      'age', Args[1],
+      'premium', Args[2]
+    ]);
+  end;
+
+  procedure PostRoute(aReq: TRequest; aResp: TResponse; const Args: array of variant);
+  begin
+    // Args[0] = name (string)
+    // Args[1] = age (integer)
+    // Args[2] = premium (boolean)
+
+    SendResponse(aResp, [
+      'name', Args[0],
+      'age', Args[1],
+      'premium', Args[2]
     ]);
   end;
 
@@ -43,6 +59,12 @@ begin
   RegisterRoute('/route2', 'GET', @Route2, [
     Param('name', ptString, 'Anonymous'),
     Param('age', ptInteger, 18),
+    Param('premium', ptBoolean, False)
+  ]);
+
+  RegisterRoute('/postdemo', 'POST', @PostRoute, [
+    Param('name', ptString, 'Anonymous'),
+    Param('age', ptInteger, 0),
     Param('premium', ptBoolean, False)
   ]);
 
