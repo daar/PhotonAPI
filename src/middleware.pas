@@ -19,8 +19,6 @@ type
 function PathMatches(const aPathMask, aURI: string): boolean;
 function StripQuery(const URI: string): string;
 
-function HeaderMiddleware(aReq: TRequest; aResp: TResponse): word;
-
 var
   Middlewares: array of TMiddlewareEntry;
 
@@ -53,14 +51,6 @@ begin
 
   // Exact match
   Result := aPathMask = URI;
-end;
-
-
-function HeaderMiddleware(aReq: TRequest; aResp: TResponse): word;
-begin
-  //only add the header
-  aResp.SetCustomHeader('X-Powered-By', 'PhotonAPI');
-  exit(200);
 end;
 
 end.

@@ -49,6 +49,13 @@ uses
     ]);
   end;
 
+  function HeaderMiddleware(aReq: TRequest; aResp: TResponse): word;
+  begin
+    //only add the header
+    aResp.SetCustomHeader('X-Powered-By', 'PhotonAPI');
+    exit(200);
+  end;
+
 begin
   // Override the default application title for your application
   Application.Title := 'PhotonAPI Demo';
@@ -67,6 +74,9 @@ begin
     Param('age', ptInteger, 0),
     Param('premium', ptBoolean, False)
   ]);
+
+  // Add custom middleware
+  Use('/route2', @HeaderMiddleware);
 
   Application.Run;
 end.

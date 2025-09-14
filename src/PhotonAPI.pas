@@ -550,7 +550,7 @@ initialization
   Routes[High(Routes)].IsSystem := True;
 
   // Registery system/internal middleware
-  Use('/route2', @HeaderMiddleware);
+  // ...
 
   Application.Title := 'PhotonAPI';
   Application.Port := 8080;
