@@ -5,8 +5,8 @@ unit PhotonAPI;
 interface
 
 uses
-  Classes, fphttpapp, fpjson, httpdefs, httproute, jsonparser, SysUtils,
-  Variants, Middleware;
+  Classes, fphttpapp, fpjson, httpdefs, httproute, jsonparser, Middleware, SysUtils,
+  Variants;
 
 type
   TParamType = (ptString, ptInteger, ptFloat, ptBoolean);
@@ -99,10 +99,10 @@ end;
 
 procedure Use(const PathMask: string; MiddlewareProc: TMiddleware);
 var
-  idx: Integer;
+  idx: integer;
 begin
   idx := Length(Middlewares);
-  SetLength(Middlewares, idx+1);
+  SetLength(Middlewares, idx + 1);
   Middlewares[idx].PathMask := PathMask;
   Middlewares[idx].Proc := MiddlewareProc;
 end;
@@ -111,7 +111,7 @@ end;
 procedure SendResponse(aResp: TResponse; const Pairs: array of const);
 var
   dataObj, wrapper: TJSONObject;
-  i: integer;
+  i:   integer;
   key: string;
 begin
   dataObj := TJSONObject.Create;
@@ -127,34 +127,34 @@ begin
         vtUnicodeString: key := string(Pairs[i].VUnicodeString);
         vtString: key := string(Pairs[i].VString^);
         vtVariant: key := VarToStr(Pairs[i].VVariant^);
-      else
-        key := VarToStr(Pairs[i].VVariant^);
+        else
+          key := VarToStr(Pairs[i].VVariant^);
       end;
 
       // Add value
-      case Pairs[i+1].VType of
-        vtAnsiString:   dataObj.Add(key, string(Pairs[i+1].VAnsiString));
-        vtUnicodeString:dataObj.Add(key, string(Pairs[i+1].VUnicodeString));
-        vtString:       dataObj.Add(key, string(Pairs[i+1].VString^));
-        vtInteger:      dataObj.Add(key, Pairs[i+1].VInteger);
-        vtBoolean:      dataObj.Add(key, Pairs[i+1].VBoolean);
-        vtExtended:     dataObj.Add(key, Pairs[i+1].VExtended^);
+      case Pairs[i + 1].VType of
+        vtAnsiString: dataObj.Add(key, string(Pairs[i + 1].VAnsiString));
+        vtUnicodeString: dataObj.Add(key, string(Pairs[i + 1].VUnicodeString));
+        vtString: dataObj.Add(key, string(Pairs[i + 1].VString^));
+        vtInteger: dataObj.Add(key, Pairs[i + 1].VInteger);
+        vtBoolean: dataObj.Add(key, Pairs[i + 1].VBoolean);
+        vtExtended: dataObj.Add(key, Pairs[i + 1].VExtended^);
         vtVariant:
-          case TVarData(Pairs[i+1].VVariant^).VType of
-            varNull:    dataObj.Add(key, Null);
+          case TVarData(Pairs[i + 1].VVariant^).VType of
+            varNull: dataObj.Add(key, Null);
             varInteger, varSmallint, varShortInt,
             varByte, varWord, varLongWord, varInt64:
-                        dataObj.Add(key, Integer(Pairs[i+1].VVariant^));
+              dataObj.Add(key, integer(Pairs[i + 1].VVariant^));
             varSingle, varDouble, varCurrency:
-                        dataObj.Add(key, Double(Pairs[i+1].VVariant^));
-            varBoolean: dataObj.Add(key, Boolean(Pairs[i+1].VVariant^));
+              dataObj.Add(key, double(Pairs[i + 1].VVariant^));
+            varBoolean: dataObj.Add(key, boolean(Pairs[i + 1].VVariant^));
             varUString, varString, varOleStr:
-                        dataObj.Add(key, VarToStr(Pairs[i+1].VVariant^));
-          else
-            dataObj.Add(key, VarToStr(Pairs[i+1].VVariant^));
+              dataObj.Add(key, VarToStr(Pairs[i + 1].VVariant^));
+            else
+              dataObj.Add(key, VarToStr(Pairs[i + 1].VVariant^));
           end;
-      else
-        dataObj.Add(key, VarToStr(Pairs[i+1].VVariant^));
+        else
+          dataObj.Add(key, VarToStr(Pairs[i + 1].VVariant^));
       end;
 
       Inc(i, 2);
@@ -242,8 +242,8 @@ begin
       508: msg := '{"error":"Loop Detected"}';
       510: msg := '{"error":"Not Extended"}';
       511: msg := '{"error":"Network Authentication Required"}';
-    else
-      msg := Format('{"error":"Unknown status %d"}', [code]);
+      else
+        msg := Format('{"error":"Unknown status %d"}', [code]);
     end;
 
   aResp.Code := code;
@@ -260,12 +260,13 @@ var
   errMsg: string;
   jsonData: TJSONData;
   bodyObj: TJSONObject;
-  mw: TMiddlewareEntry;
+  mw:   TMiddlewareEntry;
   code: word;
 
-  function RouteParamExists(const Params: array of TRouteParam; const Name: string): Boolean;
+  function RouteParamExists(const Params: array of TRouteParam;
+  const Name: string): boolean;
   var
-    k: Integer;
+    k: integer;
   begin
     Result := False;
     for k := 0 to High(Params) do
@@ -289,9 +290,8 @@ begin
   reqPath := StripQuery(aReq.URI);
 
   for i := 0 to High(Routes) do
-  begin
     if (CompareText(Routes[i].Path, reqPath) = 0) and
-       (CompareText(Routes[i].Method, aReq.Method) = 0) then
+      (CompareText(Routes[i].Method, aReq.Method) = 0) then
     begin
       SetLength(values, Length(Routes[i].Params));
 
@@ -303,16 +303,16 @@ begin
         except
           on E: Exception do
           begin
-            aResp.Code := 400;
-            aResp.Content := '{"error":"Invalid JSON"}';
+            SendServerResponse(aResp, 500,
+              '{"error":"Invalid request body","details":[{"message":"Invalid JSON format"}]}');
             exit;
           end;
         end;
 
         if not (jsonData is TJSONObject) then
         begin
-          aResp.Code := 400;
-          aResp.Content := '{"error":"Expected JSON object in body"}';
+          SendServerResponse(aResp, 500,
+            '{"error":"Invalid request body","details":[{"message":"Expected JSON object in body"}]}');
           jsonData.Free;
           exit;
         end;
@@ -323,8 +323,9 @@ begin
           for j := 0 to bodyObj.Count - 1 do
             if not RouteParamExists(Routes[i].Params, bodyObj.Names[j]) then
             begin
-              aResp.Code := 400;
-              aResp.Content := '{"error":"Unknown field: ' + bodyObj.Names[j] + '"}';
+              SendServerResponse(aResp, 422,
+                '{"error":"Validation failed","details":[{"field":"' +
+                bodyObj.Names[j] + '","message":"Unknown field"}]}');
               exit;
             end;
 
@@ -333,22 +334,27 @@ begin
           begin
             if bodyObj.Find(Routes[i].Params[j].Name) = nil then
             begin
-              aResp.Code := 400;
-              aResp.Content := '{"error":"Missing required field: ' + Routes[i].Params[j].Name + '"}';
+              SendServerResponse(aResp, 422,
+                '{"error":"Validation failed","details":[{"field":"' +
+                Routes[i].Params[j].Name + '","message":"Missing required field"}]}');
               exit;
             end;
 
             case Routes[i].Params[j].ParamType of
-              ptString:  values[j] := bodyObj.Get(Routes[i].Params[j].Name,
-                                 VarToStr(Routes[i].Params[j].DefaultValue));
-              ptInteger: values[j] := bodyObj.Get(Routes[i].Params[j].Name,
-                                 Integer(Routes[i].Params[j].DefaultValue));
-              ptFloat:   values[j] := bodyObj.Get(Routes[i].Params[j].Name,
-                                 Double(Routes[i].Params[j].DefaultValue));
-              ptBoolean: values[j] := bodyObj.Get(Routes[i].Params[j].Name,
-                                 Boolean(Routes[i].Params[j].DefaultValue));
-            else
-              values[j] := Routes[i].Params[j].DefaultValue;
+              ptString: values[j] :=
+                  bodyObj.Get(Routes[i].Params[j].Name, VarToStr(
+                  Routes[i].Params[j].DefaultValue));
+              ptInteger: values[j] :=
+                  bodyObj.Get(Routes[i].Params[j].Name, integer(
+                  Routes[i].Params[j].DefaultValue));
+              ptFloat: values[j] :=
+                  bodyObj.Get(Routes[i].Params[j].Name, double(
+                  Routes[i].Params[j].DefaultValue));
+              ptBoolean: values[j] :=
+                  bodyObj.Get(Routes[i].Params[j].Name, boolean(
+                  Routes[i].Params[j].DefaultValue));
+              else
+                values[j] := Routes[i].Params[j].DefaultValue;
             end;
           end;
         finally
@@ -356,31 +362,30 @@ begin
         end;
       end
       else
-      begin
         // GET / query parameters
         for j := 0 to High(Routes[i].Params) do
         begin
           values[j] := GetParamValue(aReq, Routes[i].Params[j], errMsg);
           if errMsg <> '' then
           begin
-            aResp.Code := 400;
-            aResp.Content := '{"error":"' + errMsg + '"}';
+            SendServerResponse(aResp, 400,
+              Format('{"error":"Validation failed","details":[{"field":"%s","message":"%s"}]}',
+              [Routes[i].Params[j].Name, errMsg]));
             exit;
           end;
         end;
-      end;
 
       // Call the handler with fully typed Args[]
       if Assigned(Routes[i].Callback) then
-        Routes[i].Callback(aReq, aResp, values);
+        Routes[i].Callback(aReq, aResp, values)
+      else
+        SendServerResponse(aResp, 500, '{"error":"Route handler not implemented"}');
 
       exit;
     end;
-  end;
 
   // Route not found
-  aResp.Code := 404;
-  aResp.Content := '{"error":"Not Found"}';
+  SendServerResponse(aResp, 404);
 end;
 
 // ------------ Register route ------------
@@ -414,7 +419,8 @@ end;
 // ------------ System routes ------------
 procedure OpenAPIHandler(aReq: TRequest; aResp: TResponse; const Args: array of variant);
 var
-  rootObj, infoObj, pathsObj, pathObj, methodObj, responsesObj, paramObj, requestBodyObj, contentObj, schemaObj, propsObj: TJSONObject;
+  rootObj, infoObj, pathsObj, pathObj, methodObj, responsesObj, paramObj,
+  requestBodyObj, contentObj, schemaObj, propsObj: TJSONObject;
   paramsArr, requiredArr: TJSONArray;
   i, j: integer;
 begin
@@ -450,10 +456,9 @@ begin
         // POST requestBody with required fields
         propsObj := TJSONObject.Create;
         for j := 0 to High(Routes[i].Params) do
-        begin
           propsObj.Add(Routes[i].Params[j].Name,
-            TJSONObject.Create(['type', ParamTypeToString(Routes[i].Params[j].ParamType)]));
-        end;
+            TJSONObject.Create(
+            ['type', ParamTypeToString(Routes[i].Params[j].ParamType)]));
 
         schemaObj := TJSONObject.Create;
         schemaObj.Add('type', 'object');
@@ -466,7 +471,7 @@ begin
         schemaObj.Add('required', requiredArr);
 
         contentObj := TJSONObject.Create;
-        contentObj.Add('application/json', 
+        contentObj.Add('application/json',
           TJSONObject.Create(['schema', schemaObj]));
 
         requestBodyObj := TJSONObject.Create;
@@ -485,8 +490,9 @@ begin
           paramObj.Add('name', Routes[i].Params[j].Name);
           paramObj.Add('in', 'query');
           paramObj.Add('required', True); // required query parameters
-          paramObj.Add('schema', 
-            TJSONObject.Create(['type', ParamTypeToString(Routes[i].Params[j].ParamType)]));
+          paramObj.Add('schema',
+            TJSONObject.Create(
+            ['type', ParamTypeToString(Routes[i].Params[j].ParamType)]));
           paramsArr.Add(paramObj);
         end;
         methodObj.Add('parameters', paramsArr);
@@ -541,12 +547,22 @@ begin
     '</html>';
 end;
 
+// Ensure a default route is always registered to prevent THTTPRouter from raising exceptions
+procedure UnknownHandler(aReq: TRequest; aResp: TResponse; const Args: array of variant);
+begin
+  SendServerResponse(aResp, 404);
+  exit;
+end;
+
 initialization
   // Register system/internal routes automatically
-  RegisterRoute('/openapi.json', 'GET', @OpenAPIHandler, [], False);
+  RegisterRoute('/openapi.json', 'GET', @OpenAPIHandler, []);
   Routes[High(Routes)].IsSystem := True;
 
-  RegisterRoute('/docs', 'GET', @DocsHandler, [], False);
+  RegisterRoute('/docs', 'GET', @DocsHandler, []);
+  Routes[High(Routes)].IsSystem := True;
+
+  RegisterRoute('/404', 'GET', @UnknownHandler, [], True);
   Routes[High(Routes)].IsSystem := True;
 
   // Registery system/internal middleware
