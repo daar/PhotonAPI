@@ -61,7 +61,7 @@ begin
   Application.Title := 'PhotonAPI Demo';
 
   // Register user routes (system routes are hidden in the unit)
-  RegisterRoute('/', 'GET', @Route1, [], true);
+  RegisterRoute('/', 'GET', @Route1, []);
 
   RegisterRoute('/route2', 'GET', @Route2, [
     Param('name', ptString, 'Anonymous'),
@@ -76,7 +76,7 @@ begin
   ]);
 
   // Add custom middleware
-  Use('/route2', @HeaderMiddleware);
+  Use('*', @HeaderMiddleware);
 
   Application.Run;
 end.
