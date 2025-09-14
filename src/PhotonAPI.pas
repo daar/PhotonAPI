@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, fphttpapp, fpjson, httpdefs, httproute, jsonparser, SysUtils,
-  Variants;
+  Variants, Middleware;
 
 type
   TParamType = (ptString, ptInteger, ptFloat, ptBoolean);
@@ -37,6 +37,8 @@ procedure RegisterRoute(const Path, Method: string; Callback: TRouteHandler;
   const Params: array of TRouteParam; IsDefault: boolean = False);
 
 procedure SendResponse(aResp: TResponse; const Pairs: array of const);
+
+procedure Use(const PathMask: string; MiddlewareProc: TMiddleware);
 
 implementation
 
@@ -93,6 +95,17 @@ begin
   end;
 end;
 
+// ------------ Middleware helper ------------
+
+procedure Use(const PathMask: string; MiddlewareProc: TMiddleware);
+var
+  idx: Integer;
+begin
+  idx := Length(Middlewares);
+  SetLength(Middlewares, idx+1);
+  Middlewares[idx].PathMask := PathMask;
+  Middlewares[idx].Proc := MiddlewareProc;
+end;
 
 // ------------ Response helper ------------
 procedure SendResponse(aResp: TResponse; const Pairs: array of const);
@@ -161,18 +174,84 @@ begin
   end;
 end;
 
-// ------------ Dispatcher ------------
-function StripQuery(const URI: string): string;
-var
-  posQ: integer;
+procedure SendServerResponse(aResp: TResponse; const code: word; msg: string = '');
 begin
-  posQ := Pos('?', URI);
-  if posQ > 0 then
-    Result := Copy(URI, 1, posQ - 1)
-  else
-    Result := URI;
+  aResp.ContentType := 'application/json';
+
+  // Provide default messages if msg is empty
+  if msg = '' then
+    case code of
+      100: msg := '{"info":"Continue"}';
+      101: msg := '{"info":"Switching Protocols"}';
+      102: msg := '{"info":"Processing"}';
+      200: msg := '{"success":"OK"}';
+      201: msg := '{"success":"Created"}';
+      202: msg := '{"success":"Accepted"}';
+      203: msg := '{"success":"Non-Authoritative Information"}';
+      204: msg := '{"success":"No Content"}';
+      205: msg := '{"success":"Reset Content"}';
+      206: msg := '{"success":"Partial Content"}';
+      207: msg := '{"success":"Multi-Status"}';
+      208: msg := '{"success":"Already Reported"}';
+      226: msg := '{"success":"IM Used"}';
+      300: msg := '{"error":"Multiple Choices"}';
+      301: msg := '{"error":"Moved Permanently"}';
+      302: msg := '{"error":"Found"}';
+      303: msg := '{"error":"See Other"}';
+      304: msg := '{"error":"Not Modified"}';
+      305: msg := '{"error":"Use Proxy"}';
+      307: msg := '{"error":"Temporary Redirect"}';
+      308: msg := '{"error":"Permanent Redirect"}';
+      400: msg := '{"error":"Bad Request"}';
+      401: msg := '{"error":"Unauthorized"}';
+      402: msg := '{"error":"Payment Required"}';
+      403: msg := '{"error":"Forbidden"}';
+      404: msg := '{"error":"Not Found"}';
+      405: msg := '{"error":"Method Not Allowed"}';
+      406: msg := '{"error":"Not Acceptable"}';
+      407: msg := '{"error":"Proxy Authentication Required"}';
+      408: msg := '{"error":"Request Timeout"}';
+      409: msg := '{"error":"Conflict"}';
+      410: msg := '{"error":"Gone"}';
+      411: msg := '{"error":"Length Required"}';
+      412: msg := '{"error":"Precondition Failed"}';
+      413: msg := '{"error":"Payload Too Large"}';
+      414: msg := '{"error":"URI Too Long"}';
+      415: msg := '{"error":"Unsupported Media Type"}';
+      416: msg := '{"error":"Range Not Satisfiable"}';
+      417: msg := '{"error":"Expectation Failed"}';
+      418: msg := '{"error":"I''m a teapot"}';
+      421: msg := '{"error":"Misdirected Request"}';
+      422: msg := '{"error":"Unprocessable Entity"}';
+      423: msg := '{"error":"Locked"}';
+      424: msg := '{"error":"Failed Dependency"}';
+      425: msg := '{"error":"Too Early"}';
+      426: msg := '{"error":"Upgrade Required"}';
+      428: msg := '{"error":"Precondition Required"}';
+      429: msg := '{"error":"Too Many Requests"}';
+      431: msg := '{"error":"Request Header Fields Too Large"}';
+      451: msg := '{"error":"Unavailable For Legal Reasons"}';
+      500: msg := '{"error":"Internal Server Error"}';
+      501: msg := '{"error":"Not Implemented"}';
+      502: msg := '{"error":"Bad Gateway"}';
+      503: msg := '{"error":"Service Unavailable"}';
+      504: msg := '{"error":"Gateway Timeout"}';
+      505: msg := '{"error":"HTTP Version Not Supported"}';
+      506: msg := '{"error":"Variant Also Negotiates"}';
+      507: msg := '{"error":"Insufficient Storage"}';
+      508: msg := '{"error":"Loop Detected"}';
+      510: msg := '{"error":"Not Extended"}';
+      511: msg := '{"error":"Network Authentication Required"}';
+    else
+      msg := Format('{"error":"Unknown status %d"}', [code]);
+    end;
+
+  aResp.Code := code;
+  aResp.Content := msg;
 end;
 
+
+// ------------ Dispatcher ------------
 procedure GlobalDispatcher(aReq: TRequest; aResp: TResponse);
 var
   i, j: integer;
@@ -181,6 +260,8 @@ var
   errMsg: string;
   jsonData: TJSONData;
   bodyObj: TJSONObject;
+  mw: TMiddlewareEntry;
+  code: word;
 
   function RouteParamExists(const Params: array of TRouteParam; const Name: string): Boolean;
   var
@@ -193,6 +274,18 @@ var
   end;
 
 begin
+  //execute middleware
+  for mw in Middlewares do
+    if PathMatches(mw.PathMask, aReq.URI) then
+    begin
+      code := mw.Proc(aReq, aResp);
+      if (code >= 400) and (code <= 599) then
+      begin
+        SendServerResponse(aResp, code);
+        exit;
+      end;
+    end;
+
   reqPath := StripQuery(aReq.URI);
 
   for i := 0 to High(Routes) do
@@ -455,6 +548,9 @@ initialization
 
   RegisterRoute('/docs', 'GET', @DocsHandler, [], False);
   Routes[High(Routes)].IsSystem := True;
+
+  // Registery system/internal middleware
+  Use('/route2', @HeaderMiddleware);
 
   Application.Title := 'PhotonAPI';
   Application.Port := 8080;

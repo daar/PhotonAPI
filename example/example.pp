@@ -54,7 +54,7 @@ begin
   Application.Title := 'PhotonAPI Demo';
 
   // Register user routes (system routes are hidden in the unit)
-  RegisterRoute('/', 'GET', @Route1, []);
+  RegisterRoute('/', 'GET', @Route1, [], true);
 
   RegisterRoute('/route2', 'GET', @Route2, [
     Param('name', ptString, 'Anonymous'),
